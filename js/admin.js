@@ -7,8 +7,15 @@
   var data = store.load();
   var editingIndex = -1;
 
-  var loginView = document.getElementById("login-view");
+  var loginForm = document.getElementById("login-form");
+  var recoverForm = document.getElementById("recover-form");
+  var resetForm = document.getElementById("reset-form");
+  var loginWrap = document.querySelector(".admin-login");
   var adminView = document.getElementById("admin-view");
+  var resetCode = "";
+  var loginInFlight = false;
+  var recoverInFlight = false;
+  var resetInFlight = false;
 
   function status(key, message, ok) {
     var el = document.querySelector('[data-status="' + key + '"]');
@@ -17,8 +24,38 @@
     el.className = "admin-status " + (ok ? "ok" : message ? "err" : "");
   }
 
+  function isSignedIn() {
+    return !!(window.AdminAuth && window.AdminAuth.getUser());
+  }
+
   function persist() {
+    if (!isSignedIn()) return;
     store.save(data);
+  }
+
+  function setBusy(btn, loading, idleLabel, busyLabel) {
+    if (!btn) return;
+    btn.disabled = !!loading;
+    btn.classList.toggle("is-loading", !!loading);
+    if (loading) {
+      btn.innerHTML = '<span class="admin-spinner" aria-hidden="true"></span>' + busyLabel;
+    } else {
+      btn.textContent = idleLabel;
+    }
+  }
+
+  function showAuthPanel(name) {
+    if (loginWrap) loginWrap.classList.remove("hidden");
+    if (adminView) adminView.classList.add("hidden");
+    if (loginForm) loginForm.classList.toggle("hidden", name !== "login");
+    if (recoverForm) recoverForm.classList.toggle("hidden", name !== "recover");
+    if (resetForm) resetForm.classList.toggle("hidden", name !== "reset");
+  }
+
+  function passwordIssue(pw) {
+    if (!pw || pw.length < 8) return "Use at least 8 characters.";
+    if (!/[A-Za-z]/.test(pw) || !/\d/.test(pw)) return "Include letters and numbers.";
+    return "";
   }
 
   function readFileAsImage(file) {
@@ -53,7 +90,7 @@
   }
 
   function showAdmin() {
-    loginView.classList.add("hidden");
+    if (loginWrap) loginWrap.classList.add("hidden");
     adminView.classList.remove("hidden");
     fillAll();
     renderWorks();
@@ -367,23 +404,160 @@
     });
   }
 
-  document.getElementById("login-form").addEventListener("submit", function (e) {
+  function setFormStatus(id, message, ok) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = message || "";
+    el.className = "admin-status " + (ok ? "ok" : message ? "err" : "");
+  }
+
+  function clearResetParams() {
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+    }
+  }
+
+  function waitForAuth(done) {
+    if (window.AdminAuth) {
+      done(window.AdminAuth);
+      return;
+    }
+    window.addEventListener(
+      "admin-auth-ready",
+      function () {
+        done(window.AdminAuth);
+      },
+      { once: true }
+    );
+  }
+
+  loginForm.addEventListener("submit", function (e) {
     e.preventDefault();
+    if (loginInFlight) return;
+    var email = document.getElementById("admin-email").value.trim();
     var password = document.getElementById("admin-password").value;
-    var st = document.getElementById("login-status");
-    store.login(password).then(function (ok) {
-      if (!ok) {
-        st.textContent = "Wrong password.";
-        st.className = "admin-status err";
-        return;
-      }
-      showAdmin();
-    });
+    var btn = document.getElementById("login-submit");
+    setFormStatus("login-status", "", true);
+    if (!window.AdminAuth || typeof window.AdminAuth.login !== "function") {
+      setFormStatus("login-status", "Authentication failed to load. Refresh the page and try again.", false);
+      return;
+    }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setFormStatus("login-status", "Enter a valid email address.", false);
+      return;
+    }
+    loginInFlight = true;
+    setBusy(btn, true, "Enter admin", "Signing in…");
+    window.AdminAuth.login(email, password)
+      .then(function () {
+        showAdmin();
+      })
+      .catch(function (err) {
+        setFormStatus("login-status", (err && err.message) || "Sign-in failed. Check your email and password.", false);
+      })
+      .then(function () {
+        loginInFlight = false;
+        setBusy(btn, false, "Enter admin", "Signing in…");
+      });
+  });
+
+  document.getElementById("forgot-open").addEventListener("click", function () {
+    var loginEmail = document.getElementById("admin-email").value.trim();
+    if (loginEmail) document.getElementById("recover-email").value = loginEmail;
+    setFormStatus("recover-status", "", true);
+    showAuthPanel("recover");
+  });
+
+  document.getElementById("recover-back").addEventListener("click", function () {
+    showAuthPanel("login");
+  });
+
+  recoverForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (recoverInFlight) return;
+    var email = document.getElementById("recover-email").value.trim();
+    var btn = document.getElementById("recover-submit");
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setFormStatus("recover-status", "Enter a valid email address.", false);
+      return;
+    }
+    recoverInFlight = true;
+    setBusy(btn, true, "Send Reset Link", "Sending…");
+    window.AdminAuth.sendReset(email)
+      .then(function () {
+        setFormStatus(
+          "recover-status",
+          "If that email is registered, a password reset link has been sent. Check your inbox and spam folder.",
+          true
+        );
+      })
+      .catch(function (err) {
+        setFormStatus("recover-status", (err && err.message) || "Could not send the reset email.", false);
+      })
+      .then(function () {
+        recoverInFlight = false;
+        setBusy(btn, false, "Send Reset Link", "Sending…");
+      });
+  });
+
+  document.getElementById("reset-back").addEventListener("click", function () {
+    resetCode = "";
+    clearResetParams();
+    showAuthPanel("login");
+  });
+
+  resetForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (resetInFlight) return;
+    var pw = document.getElementById("reset-password").value;
+    var pw2 = document.getElementById("reset-password-2").value;
+    var btn = document.getElementById("reset-submit");
+    var issue = passwordIssue(pw);
+    if (issue) {
+      setFormStatus("reset-status", issue, false);
+      return;
+    }
+    if (pw !== pw2) {
+      setFormStatus("reset-status", "Passwords do not match.", false);
+      return;
+    }
+    if (!resetCode) {
+      setFormStatus("reset-status", "This reset link is invalid or has already been used. Request a new one.", false);
+      return;
+    }
+    resetInFlight = true;
+    setBusy(btn, true, "Save new password", "Saving…");
+    window.AdminAuth.confirmReset(resetCode, pw)
+      .then(function () {
+        resetCode = "";
+        clearResetParams();
+        showAuthPanel("login");
+        setFormStatus("login-status", "Password updated. Sign in with your new password.", true);
+        document.getElementById("admin-password").value = "";
+      })
+      .catch(function (err) {
+        setFormStatus("reset-status", (err && err.message) || "Could not update the password.", false);
+      })
+      .then(function () {
+        resetInFlight = false;
+        setBusy(btn, false, "Save new password", "Saving…");
+      });
   });
 
   document.getElementById("logout-btn").addEventListener("click", function () {
-    store.setAuthed(false);
-    location.reload();
+    var auth = window.AdminAuth;
+    if (!auth || typeof auth.logout !== "function") {
+      location.reload();
+      return;
+    }
+    auth.logout().then(
+      function () {
+        location.reload();
+      },
+      function () {
+        location.reload();
+      }
+    );
   });
 
   document.querySelectorAll(".admin-nav button").forEach(function (btn) {
@@ -568,23 +742,30 @@
 
   document.getElementById("form-password").addEventListener("submit", function (e) {
     e.preventDefault();
+    if (!isSignedIn()) return;
     var a = document.getElementById("new-password").value;
     var b = document.getElementById("new-password-2").value;
-    if (a.length < 8) {
-      status("settings", "Use at least 8 characters.", false);
+    var issue = passwordIssue(a);
+    if (issue) {
+      status("settings", issue, false);
       return;
     }
     if (a !== b) {
       status("settings", "Passwords do not match.", false);
       return;
     }
-    store.setPassword(a).then(function () {
-      document.getElementById("form-password").reset();
-      status("settings", "Password changed.", true);
-    });
+    window.AdminAuth.changePassword(a)
+      .then(function () {
+        document.getElementById("form-password").reset();
+        status("settings", "Password updated for your Firebase admin account.", true);
+      })
+      .catch(function (err) {
+        status("settings", (err && err.message) || "Could not change the password.", false);
+      });
   });
 
   document.getElementById("reset-content").addEventListener("click", function () {
+    if (!isSignedIn()) return;
     if (!confirm("Reset all content to the original portfolio? This cannot be undone unless you exported a backup.")) {
       return;
     }
@@ -595,5 +776,57 @@
     status("settings", "Content reset to original.", true);
   });
 
-  if (store.isAuthed()) showAdmin();
+  waitForAuth(function (auth) {
+    if (!auth || !auth.isConfigured()) {
+      showAuthPanel("login");
+      setFormStatus(
+        "login-status",
+        "Authentication is not configured yet. Add your Firebase values in js/firebase-config.js.",
+        false
+      );
+      return;
+    }
+    if (auth.initError) {
+      showAuthPanel("login");
+      setFormStatus(
+        "login-status",
+        "Firebase failed to start. Check js/firebase-config.js and the browser console.",
+        false
+      );
+      return;
+    }
+
+    var params = new URLSearchParams(window.location.search);
+    if (params.get("mode") === "resetPassword" && params.get("oobCode")) {
+      resetCode = params.get("oobCode");
+      showAuthPanel("reset");
+      setBusy(document.getElementById("reset-submit"), true, "Save new password", "Checking link…");
+      auth
+        .verifyReset(resetCode)
+        .then(function () {
+          setFormStatus("reset-status", "Link verified. Choose a new password.", true);
+        })
+        .catch(function (err) {
+          resetCode = "";
+          showAuthPanel("login");
+          setFormStatus("login-status", (err && err.message) || "This reset link is invalid or has expired.", false);
+          clearResetParams();
+        })
+        .then(function () {
+          setBusy(document.getElementById("reset-submit"), false, "Save new password", "Checking link…");
+        });
+      return;
+    }
+
+    auth.onUser(function (user) {
+      if (user) {
+        showAdmin();
+        return;
+      }
+      if (resetCode) return;
+      if (recoverForm && !recoverForm.classList.contains("hidden")) return;
+      if (resetForm && !resetForm.classList.contains("hidden")) return;
+      showAuthPanel("login");
+    });
+  });
 })();

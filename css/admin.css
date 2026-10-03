@@ -30,6 +30,67 @@
   margin: 0 0 1.25rem;
 }
 
+.admin-login-footer {
+  margin-top: 1rem;
+  margin-bottom: 0;
+}
+
+.admin-forgot-wrap {
+  margin: -0.35rem 0 0.85rem;
+}
+
+.admin-forgot-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.admin-forgot-link:hover,
+.admin-forgot-link:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.admin-login-card .btn + .btn {
+  margin-top: 0.65rem;
+  width: 100%;
+}
+
+.btn.is-loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.admin-spinner {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-right: 0.45rem;
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: admin-spin 0.7s linear infinite;
+  vertical-align: -0.12em;
+}
+
+@keyframes admin-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-spinner {
+    animation: none;
+    border-top-color: rgba(255, 255, 255, 0.28);
+  }
+}
+
 .admin-top {
   position: sticky;
   top: 0;

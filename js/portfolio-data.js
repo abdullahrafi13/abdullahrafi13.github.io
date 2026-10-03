@@ -2,9 +2,6 @@
   "use strict";
 
   var STORAGE_KEY = "talha-portfolio-content-v1";
-  var PASS_KEY = "talha-portfolio-admin-pass";
-  var SESSION_KEY = "talha-portfolio-admin-session";
-  var DEFAULT_PASSWORD = "TalhaAdmin2026";
 
   var DEFAULTS = {
     site: {
@@ -452,22 +449,6 @@
     return JSON.parse(JSON.stringify(value));
   }
 
-  function hashPassword(password) {
-    var str = "talha-admin:" + String(password || "");
-    var h = 2166136261;
-    for (var i = 0; i < str.length; i++) {
-      h ^= str.charCodeAt(i);
-      h = Math.imul(h, 16777619);
-    }
-    var parts = [];
-    var seed = h >>> 0;
-    for (var r = 0; r < 8; r++) {
-      seed = Math.imul(seed ^ (str.charCodeAt(r % str.length) + r * 31), 16777619) >>> 0;
-      parts.push(seed.toString(16).padStart(8, "0"));
-    }
-    return Promise.resolve(parts.join(""));
-  }
-
   function load() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
@@ -524,36 +505,8 @@
     return id;
   }
 
-  function isAuthed() {
-    return sessionStorage.getItem(SESSION_KEY) === "1";
-  }
-
-  function setAuthed(on) {
-    if (on) sessionStorage.setItem(SESSION_KEY, "1");
-    else sessionStorage.removeItem(SESSION_KEY);
-  }
-
-  function login(password) {
-    return hashPassword(password).then(function (hash) {
-      var stored = localStorage.getItem(PASS_KEY);
-      return hashPassword(DEFAULT_PASSWORD).then(function (defaultHash) {
-        var expected = stored || defaultHash;
-        if (hash !== expected) return false;
-        setAuthed(true);
-        return true;
-      });
-    });
-  }
-
-  function setPassword(nextPassword) {
-    return hashPassword(nextPassword).then(function (hash) {
-      localStorage.setItem(PASS_KEY, hash);
-    });
-  }
-
   global.PortfolioStore = {
     DEFAULTS: DEFAULTS,
-    DEFAULT_PASSWORD: DEFAULT_PASSWORD,
     load: load,
     save: save,
     reset: reset,
@@ -561,10 +514,5 @@
     uniqueId: uniqueId,
     slugify: slugify,
     clone: clone,
-    isAuthed: isAuthed,
-    setAuthed: setAuthed,
-    login: login,
-    setPassword: setPassword,
-    hashPassword: hashPassword,
   };
 })(window);

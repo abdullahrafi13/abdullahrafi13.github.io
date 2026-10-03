@@ -13,16 +13,51 @@
   <link rel="stylesheet" href="css/admin.css" />
 </head>
 <body class="page-admin">
-  <div id="login-view" class="admin-login">
+  <div class="admin-login">
     <form class="admin-login-card glass" id="login-form">
       <h1>Portfolio admin</h1>
+      <div class="form-row">
+        <label for="admin-email">Email</label>
+        <input id="admin-email" name="email" type="email" autocomplete="username" required placeholder="Admin email" />
+      </div>
       <div class="form-row">
         <label for="admin-password">Password</label>
         <input id="admin-password" name="password" type="password" autocomplete="current-password" required />
       </div>
+      <p class="admin-forgot-wrap">
+        <button class="admin-forgot-link" type="button" id="forgot-open">Forgot Password?</button>
+      </p>
       <p class="admin-status" id="login-status" role="status"></p>
-      <button class="btn btn-primary" type="submit">Enter admin</button>
-      <p class="admin-hint" style="margin-top:1rem"><a class="admin-back" href="index.html">View Portfolio</a></p>
+      <button class="btn btn-primary" type="submit" id="login-submit">Enter admin</button>
+      <p class="admin-hint admin-login-footer"><a class="admin-back" href="index.html">View Portfolio</a></p>
+    </form>
+
+    <form class="admin-login-card glass hidden" id="recover-form">
+      <h1>Reset password</h1>
+      <p class="admin-hint">Enter the email for your admin account. If it is registered, you will receive a reset link.</p>
+      <div class="form-row">
+        <label for="recover-email">Registered admin email</label>
+        <input id="recover-email" name="email" type="email" autocomplete="email" required placeholder="Admin email" />
+      </div>
+      <p class="admin-status" id="recover-status" role="status"></p>
+      <button class="btn btn-primary" type="submit" id="recover-submit">Send Reset Link</button>
+      <button class="btn btn-outline" type="button" id="recover-back">Back to Login</button>
+    </form>
+
+    <form class="admin-login-card glass hidden" id="reset-form">
+      <h1>Set new password</h1>
+      <p class="admin-hint">Choose a new password for your admin account.</p>
+      <div class="form-row">
+        <label for="reset-password">New password</label>
+        <input id="reset-password" name="password" type="password" autocomplete="new-password" required minlength="8" />
+      </div>
+      <div class="form-row">
+        <label for="reset-password-2">Confirm password</label>
+        <input id="reset-password-2" name="passwordConfirm" type="password" autocomplete="new-password" required minlength="8" />
+      </div>
+      <p class="admin-status" id="reset-status" role="status"></p>
+      <button class="btn btn-primary" type="submit" id="reset-submit">Save new password</button>
+      <button class="btn btn-outline" type="button" id="reset-back">Back to Login</button>
     </form>
   </div>
 
@@ -267,7 +302,7 @@
 
         <section class="admin-panel" id="panel-settings">
           <h2>Settings &amp; backup</h2>
-          <p class="admin-note">Edits are saved in this browser. Export a JSON backup if you switch computers, then import it here. Client-side login protects casual visitors, not a public server.</p>
+          <p class="admin-note">Portfolio edits stay in this browser until you export a backup. Sign-in uses Firebase Authentication. Changing your password here updates your Firebase admin account.</p>
           <div class="admin-grid">
             <div>
               <button class="btn btn-outline" type="button" id="export-json">Export JSON backup</button>
@@ -296,6 +331,8 @@
   </div>
 
   <script src="js/portfolio-data.js"></script>
-  <script src="js/admin.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script type="module" src="js/firebase-auth.js"></script>
+  <script src="js/admin.js" defer></script>
 </body>
 </html>
