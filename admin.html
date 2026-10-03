@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#0a0b0d" />
+  <title>Admin | Portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/admin.css" />
+</head>
+<body class="page-admin">
+  <div id="login-view" class="admin-login">
+    <form class="admin-login-card glass" id="login-form">
+      <h1>Portfolio admin</h1>
+      <p class="admin-hint">Sign in to edit site content and add works. Default password is <code>TalhaAdmin2026</code> until you change it.</p>
+      <div class="form-row">
+        <label for="admin-password">Password</label>
+        <input id="admin-password" name="password" type="password" autocomplete="current-password" required />
+      </div>
+      <p class="admin-status" id="login-status" role="status"></p>
+      <button class="btn btn-primary" type="submit">Enter admin</button>
+      <p class="admin-hint" style="margin-top:1rem"><a href="index.html">← Back to site</a></p>
+    </form>
+  </div>
+
+  <div id="admin-view" class="admin-shell hidden">
+    <header class="admin-top">
+      <h1>Edit portfolio</h1>
+      <div class="admin-top-actions">
+        <a class="btn btn-outline btn-small" href="index.html" target="_blank" rel="noopener">View site</a>
+        <button class="btn btn-outline btn-small" type="button" id="logout-btn">Log out</button>
+      </div>
+    </header>
+    <div class="admin-layout">
+      <nav class="admin-nav" aria-label="Admin sections">
+        <button type="button" class="is-active" data-panel="hero">Hero</button>
+        <button type="button" data-panel="about">About</button>
+        <button type="button" data-panel="skills">Skills</button>
+        <button type="button" data-panel="works">Works</button>
+        <button type="button" data-panel="contact">Contact</button>
+        <button type="button" data-panel="settings">Settings</button>
+      </nav>
+      <main class="admin-main">
+        <section class="admin-panel is-active" id="panel-hero">
+          <h2>Hero &amp; identity</h2>
+          <form id="form-hero" class="admin-grid">
+            <div class="form-row">
+              <label for="site-logo">Logo letters</label>
+              <input id="site-logo" name="logo" type="text" maxlength="8" />
+            </div>
+            <div class="form-row">
+              <label for="site-title">Browser tab title</label>
+              <input id="site-title" name="title" type="text" />
+            </div>
+            <div class="form-row">
+              <label for="site-name">Your name</label>
+              <input id="site-name" name="personName" type="text" />
+            </div>
+            <div class="form-row">
+              <label for="hero-kicker">Kicker (above headline)</label>
+              <input id="hero-kicker" name="kicker" type="text" />
+            </div>
+            <div class="admin-grid two">
+              <div class="form-row">
+                <label for="hero-line1">Headline line 1</label>
+                <input id="hero-line1" name="titleLine1" type="text" />
+              </div>
+              <div class="form-row">
+                <label for="hero-line2">Headline line 2</label>
+                <input id="hero-line2" name="titleLine2" type="text" />
+              </div>
+            </div>
+            <div class="form-row">
+              <label for="hero-sub">Text before typed phrase</label>
+              <input id="hero-sub" name="subStatic" type="text" />
+            </div>
+            <div class="form-row">
+              <label for="hero-typed">Typed phrase</label>
+              <input id="hero-typed-phrase" name="typedPhrase" type="text" />
+            </div>
+            <div class="form-row">
+              <label for="hero-before">Intro before name</label>
+              <input id="hero-before" name="introBefore" type="text" />
+            </div>
+            <div class="form-row">
+              <label for="hero-after">Intro after name</label>
+              <input id="hero-after" name="introAfter" type="text" />
+            </div>
+            <button class="btn btn-primary" type="submit">Save hero</button>
+            <p class="admin-status" data-status="hero"></p>
+          </form>
+        </section>
+
+        <section class="admin-panel" id="panel-about">
+          <h2>About</h2>
+          <form id="form-about" class="admin-grid">
+            <div class="form-row">
+              <label for="about-photo">Profile photo URL or path</label>
+              <input id="about-photo" name="photo" type="text" placeholder="assets/profile.png" />
+            </div>
+            <div class="form-row">
+              <label for="about-photo-file">Or upload a photo</label>
+              <input id="about-photo-file" type="file" accept="image/*" />
+              <img id="about-photo-preview" class="preview-thumb hidden" alt="Profile preview" />
+            </div>
+            <div class="form-row">
+              <label for="about-photo-alt">Photo alt text</label>
+              <input id="about-photo-alt" name="photoAlt" type="text" />
+            </div>
+            <div class="form-row">
+              <label for="about-lead">About paragraph</label>
+              <textarea id="about-lead" name="lead" rows="5"></textarea>
+            </div>
+            <div class="form-row">
+              <label>Highlights</label>
+              <div id="highlights-list"></div>
+              <button class="btn btn-outline btn-small" type="button" id="add-highlight">Add highlight</button>
+            </div>
+            <button class="btn btn-primary" type="submit">Save about</button>
+            <p class="admin-status" data-status="about"></p>
+          </form>
+        </section>
+
+        <section class="admin-panel" id="panel-skills">
+          <h2>Skills</h2>
+          <form id="form-skills" class="admin-grid">
+            <div class="form-row">
+              <label for="skills-heading">Section heading</label>
+              <input id="skills-heading-input" name="heading" type="text" />
+            </div>
+            <div class="form-row">
+              <label for="skills-sub">Section subtitle</label>
+              <input id="skills-sub-input" name="sub" type="text" />
+            </div>
+            <div class="form-row">
+              <label>Skill bars (0–100)</label>
+              <div id="skills-rows"></div>
+              <button class="btn btn-outline btn-small" type="button" id="add-skill">Add skill</button>
+            </div>
+            <button class="btn btn-primary" type="submit">Save skills</button>
+            <p class="admin-status" data-status="skills"></p>
+          </form>
+        </section>
+
+        <section class="admin-panel" id="panel-works">
+          <div id="works-list-view">
+            <div class="works-toolbar">
+              <h2>Works / projects</h2>
+              <button class="btn btn-primary" type="button" id="add-work">Add work</button>
+            </div>
+            <p class="admin-note">New works appear on the homepage and get a detail page automatically. Upload images or paste an <code>assets/</code> path.</p>
+            <div id="work-list" class="work-list"></div>
+            <p class="admin-status" data-status="works"></p>
+          </div>
+          <div id="work-editor-view" class="hidden">
+            <button class="btn btn-outline btn-small" type="button" id="work-back">← All works</button>
+            <h2 id="work-editor-title">Edit work</h2>
+            <form id="form-work" class="admin-grid">
+              <input type="hidden" id="work-id" />
+              <div class="form-row">
+                <label for="work-title">Title</label>
+                <input id="work-title" type="text" required />
+              </div>
+              <div class="form-row">
+                <label for="work-card-desc">Homepage short description</label>
+                <textarea id="work-card-desc" rows="3" required></textarea>
+              </div>
+              <div class="form-row">
+                <label for="work-tools">Tools line</label>
+                <input id="work-tools" type="text" placeholder="SolidWorks · Rendering" />
+              </div>
+              <div class="form-row">
+                <label for="work-meta">Detail page subtitle</label>
+                <input id="work-meta" type="text" />
+              </div>
+              <div class="form-row">
+                <label for="work-image">Cover image path or URL</label>
+                <input id="work-image" type="text" />
+              </div>
+              <div class="form-row">
+                <label for="work-image-file">Or upload cover image</label>
+                <input id="work-image-file" type="file" accept="image/*" />
+                <img id="work-image-preview" class="preview-thumb hidden" alt="Cover preview" />
+              </div>
+              <div class="form-row">
+                <label for="work-image-alt">Cover alt text</label>
+                <input id="work-image-alt" type="text" />
+              </div>
+              <div class="form-row">
+                <label for="work-overview">Overview</label>
+                <textarea id="work-overview" rows="7"></textarea>
+              </div>
+              <div class="form-row">
+                <label for="work-features">Key features (one per line)</label>
+                <textarea id="work-features" rows="6"></textarea>
+              </div>
+              <div class="form-row">
+                <label for="work-software">Software</label>
+                <textarea id="work-software" rows="3"></textarea>
+              </div>
+              <div class="admin-grid two">
+                <div class="form-row">
+                  <label for="work-live">Live URL (optional)</label>
+                  <input id="work-live" type="text" placeholder="Leave blank to use the detail page" />
+                </div>
+                <div class="form-row">
+                  <label for="work-source">Source / CAD files URL (optional)</label>
+                  <input id="work-source" type="text" placeholder="Leave blank to send visitors to Contact" />
+                </div>
+              </div>
+              <div class="form-row">
+                <label for="work-gallery-heading">Gallery heading</label>
+                <input id="work-gallery-heading" type="text" />
+              </div>
+              <div class="form-row">
+                <label for="work-gallery-lead">Gallery intro</label>
+                <input id="work-gallery-lead" type="text" />
+              </div>
+              <div class="form-row">
+                <label>Gallery images</label>
+                <div id="gallery-list" class="gallery-editor"></div>
+                <button class="btn btn-outline btn-small" type="button" id="add-gallery">Add gallery image</button>
+              </div>
+              <button class="btn btn-primary" type="submit">Save work</button>
+              <p class="admin-status" data-status="work-editor"></p>
+            </form>
+          </div>
+        </section>
+
+        <section class="admin-panel" id="panel-contact">
+          <h2>Contact</h2>
+          <form id="form-contact" class="admin-grid">
+            <div class="form-row">
+              <label for="contact-intro">Intro</label>
+              <textarea id="contact-intro" name="intro" rows="3"></textarea>
+            </div>
+            <div class="form-row">
+              <label for="contact-email">Email</label>
+              <input id="contact-email" name="email" type="email" />
+            </div>
+            <div class="form-row">
+              <label for="contact-linkedin">LinkedIn URL</label>
+              <input id="contact-linkedin" name="linkedinUrl" type="url" />
+            </div>
+            <div class="form-row">
+              <label for="contact-linkedin-label">LinkedIn label</label>
+              <input id="contact-linkedin-label" name="linkedinLabel" type="text" />
+            </div>
+            <div class="form-row">
+              <label for="contact-wa">WhatsApp number (digits with country code)</label>
+              <input id="contact-wa" name="whatsappDigits" type="text" />
+            </div>
+            <div class="form-row">
+              <label for="contact-wa-display">WhatsApp display text</label>
+              <input id="contact-wa-display" name="whatsappDisplay" type="text" />
+            </div>
+            <button class="btn btn-primary" type="submit">Save contact</button>
+            <p class="admin-status" data-status="contact"></p>
+          </form>
+        </section>
+
+        <section class="admin-panel" id="panel-settings">
+          <h2>Settings &amp; backup</h2>
+          <p class="admin-note">Edits are saved in this browser. Export a JSON backup if you switch computers, then import it here. Client-side login protects casual visitors, not a public server.</p>
+          <div class="admin-grid">
+            <div>
+              <button class="btn btn-outline" type="button" id="export-json">Export JSON backup</button>
+              <button class="btn btn-outline" type="button" id="import-json-btn">Import JSON</button>
+              <input id="import-json" type="file" accept="application/json,.json" class="hidden" />
+            </div>
+            <form id="form-password" class="admin-grid">
+              <div class="form-row">
+                <label for="new-password">New admin password</label>
+                <input id="new-password" type="password" minlength="8" required />
+              </div>
+              <div class="form-row">
+                <label for="new-password-2">Confirm password</label>
+                <input id="new-password-2" type="password" minlength="8" required />
+              </div>
+              <button class="btn btn-primary" type="submit">Change password</button>
+            </form>
+            <div>
+              <button class="btn btn-danger" type="button" id="reset-content">Reset all content to original site</button>
+            </div>
+            <p class="admin-status" data-status="settings"></p>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="js/portfolio-data.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
