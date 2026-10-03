@@ -55,12 +55,7 @@
       span.id = "year";
       span.textContent = year ? year.textContent : String(new Date().getFullYear());
       el.appendChild(span);
-      el.appendChild(document.createTextNode(" " + name + " · "));
-      var admin = document.createElement("a");
-      admin.className = "admin-link";
-      admin.href = "admin.html";
-      admin.textContent = "Admin";
-      el.appendChild(admin);
+      el.appendChild(document.createTextNode(" " + name));
     });
 
     if (contact.email) {

@@ -206,6 +206,38 @@ a:hover {
   text-decoration: none;
 }
 
+.site-nav a.nav-admin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  position: relative;
+}
+
+.site-nav a.nav-admin svg {
+  flex-shrink: 0;
+}
+
+.site-nav a.nav-admin::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  box-shadow: 0 0 12px var(--accent-glow);
+  opacity: 0;
+  transform: scaleX(0.45);
+  transition: opacity 0.25s var(--ease-out), transform 0.25s var(--ease-out);
+}
+
+.site-nav a.nav-admin:hover::after,
+.site-nav a.nav-admin:focus-visible::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
 .site-nav a.nav-anchor.is-active {
   color: var(--text);
   position: relative;
@@ -252,7 +284,8 @@ a:hover {
     gap: 1rem;
   }
 
-  .site-nav a.nav-anchor.is-active::after {
+  .site-nav a.nav-anchor.is-active::after,
+  .site-nav a.nav-admin::after {
     left: 0;
     right: auto;
     bottom: 0;
@@ -260,6 +293,15 @@ a:hover {
     width: 3px;
     height: auto;
     border-radius: 2px;
+  }
+
+  .site-nav a.nav-admin::after {
+    transform: scaleY(0.4);
+  }
+
+  .site-nav a.nav-admin:hover::after,
+  .site-nav a.nav-admin:focus-visible::after {
+    transform: scaleY(1);
   }
 
   .site-header.nav-open .nav-toggle-bar:nth-child(1) {
@@ -1286,17 +1328,6 @@ section:not(.hero) {
 
 .hidden {
   display: none !important;
-}
-
-.admin-link {
-  color: var(--text-muted);
-  text-decoration: none;
-  font-size: 0.9em;
-}
-
-.admin-link:hover,
-.admin-link:focus-visible {
-  color: var(--accent);
 }
 
 .detail-header {

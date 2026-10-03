@@ -16,14 +16,13 @@
   <div id="login-view" class="admin-login">
     <form class="admin-login-card glass" id="login-form">
       <h1>Portfolio admin</h1>
-      <p class="admin-hint">Sign in to edit site content and add works. Default password is <code>TalhaAdmin2026</code> until you change it.</p>
       <div class="form-row">
         <label for="admin-password">Password</label>
         <input id="admin-password" name="password" type="password" autocomplete="current-password" required />
       </div>
       <p class="admin-status" id="login-status" role="status"></p>
       <button class="btn btn-primary" type="submit">Enter admin</button>
-      <p class="admin-hint" style="margin-top:1rem"><a href="index.html">← Back to site</a></p>
+      <p class="admin-hint" style="margin-top:1rem"><a class="admin-back" href="index.html">View Portfolio</a></p>
     </form>
   </div>
 
@@ -31,7 +30,10 @@
     <header class="admin-top">
       <h1>Edit portfolio</h1>
       <div class="admin-top-actions">
-        <a class="btn btn-outline btn-small" href="index.html" target="_blank" rel="noopener">View site</a>
+        <a class="btn btn-outline btn-small admin-back" href="index.html" title="View Portfolio">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5z"/></svg>
+          <span>View Portfolio</span>
+        </a>
         <button class="btn btn-outline btn-small" type="button" id="logout-btn">Log out</button>
       </div>
     </header>

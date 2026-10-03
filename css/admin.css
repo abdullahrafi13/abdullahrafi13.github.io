@@ -56,6 +56,16 @@
   flex-wrap: wrap;
 }
 
+.admin-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.admin-hint .admin-back {
+  color: var(--text);
+}
+
 .admin-layout {
   display: grid;
   grid-template-columns: 220px 1fr;
