@@ -182,6 +182,15 @@
     if (el.classList.contains("skill-card")) animateSkillCard(el);
   }
 
+  function isNearViewport(el) {
+    var rect = el.getBoundingClientRect();
+    var vh = window.innerHeight || document.documentElement.clientHeight || 0;
+    var vw = window.innerWidth || document.documentElement.clientWidth || 0;
+    // Generous margin so mobile Safari still reveals after DOM swaps.
+    var pad = Math.max(120, Math.round(vh * 0.2));
+    return rect.bottom >= -pad && rect.top <= vh + pad && rect.right >= 0 && rect.left <= vw;
+  }
+
   function bindReveals(root) {
     var scope = root && root.querySelectorAll ? root : document;
     var nodes = scope.querySelectorAll(".reveal");
@@ -202,36 +211,59 @@
             revealIo.unobserve(entry.target);
           });
         },
-        { rootMargin: "0px 0px -8% 0px", threshold: 0.08 }
+        // Positive bottom margin helps mobile browsers fire before content feels "blank".
+        { rootMargin: "10% 0px 25% 0px", threshold: 0.01 }
       );
     }
 
     nodes.forEach(function (el) {
-      if (el.dataset.revealBound === "1" && el.classList.contains("is-visible")) return;
-      el.dataset.revealBound = "1";
+      if (el.classList.contains("is-visible")) {
+        if (el.classList.contains("skill-card")) animateSkillCard(el);
+        return;
+      }
+
       var parent = el.parentElement;
-      if (parent && parent.classList.contains("stagger-children")) {
+      if (parent && parent.classList.contains("stagger-children") && !el.style.transitionDelay) {
         var index = Array.from(parent.children).indexOf(el);
         el.style.transitionDelay = index * 0.1 + "s";
       }
-      // Fresh DOM nodes from Firestore hydrate need a new observation.
-      if (el.classList.contains("is-visible") && el.classList.contains("skill-card")) {
-        animateSkillCard(el);
+
+      // After Firestore re-render, cards already on screen often miss the first IO callback on mobile.
+      if (isNearViewport(el)) {
+        revealNow(el);
         return;
       }
-      el.classList.remove("is-visible");
+
       revealIo.observe(el);
     });
   }
 
+  function revealVisibleFallback() {
+    document.querySelectorAll(".reveal:not(.is-visible)").forEach(function (el) {
+      if (isNearViewport(el)) revealNow(el);
+    });
+  }
+
   bindReveals(document);
+  // Catch late layout / address-bar resize on mobile.
+  window.setTimeout(revealVisibleFallback, 300);
+  window.setTimeout(revealVisibleFallback, 1000);
 
   window.addEventListener("portfolio-content-applied", function () {
     startHeroTyping();
-    // Defer one frame so layout/DOM from site-render is settled.
     requestAnimationFrame(function () {
-      bindReveals(document);
+      requestAnimationFrame(function () {
+        bindReveals(document);
+        revealVisibleFallback();
+        window.setTimeout(revealVisibleFallback, 250);
+      });
     });
+  });
+
+  window.addEventListener("scroll", revealVisibleFallback, { passive: true });
+  window.addEventListener("resize", revealVisibleFallback, { passive: true });
+  window.addEventListener("orientationchange", function () {
+    window.setTimeout(revealVisibleFallback, 150);
   });
 
   /* Contact form — EmailJS */
