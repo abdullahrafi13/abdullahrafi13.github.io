@@ -1,30 +1,30 @@
 (function (global) {
   "use strict";
 
-  var STORAGE_KEY = "talha-portfolio-content-v1";
+  var STORAGE_KEY = "rafi-portfolio-content-v1";
 
   var DEFAULTS = {
     site: {
-      logo: "WT",
-      title: "Portfolio | Talha",
-      personName: "Walliuzzaman Talha",
+      logo: "assets/profile.jpg",
+      title: "Portfolio | Rafi",
+      personName: "Md Abdullah Al Hasan Rafi",
       jobTitle: "CAD Designer",
     },
     hero: {
       kicker: "CAD Designer · IPE Student",
-      titleLine1: "Designing Ideas",
-      titleLine2: "into Reality",
+      titleLine1: "Turning Concepts",
+      titleLine2: "into Designs",
       subStatic: "CAD Designer specializing in",
-      typedPhrase: "precision engineering models.",
+      typedPhrase: "accurate CAD models.",
       introBefore: "Hi, I'm",
-      introAfter: ", an IPE student passionate about creating accurate and efficient CAD designs.",
+      introAfter: ", an IPE student passionate about creating precise CAD models and practical engineering designs.",
     },
     about: {
-      photo: "assets/profile.png",
-      photoAlt: "Walliuzzaman Talha",
+      photo: "assets/profile.jpg",
+      photoAlt: "Md Abdullah Al Hasan Rafi",
       lead:
-        "I am an Industrial & Production Engineering student with a strong interest in CAD modeling and mechanical design. I enjoy turning ideas into precise 3D models and continuously improving my technical and problem-solving skills.",
-      highlights: ["3D Modeling", "Assembly Design", "Technical Drawing"],
+        "I am an Industrial & Production Engineering student with a strong interest in CAD design and mechanical engineering. I enjoy transforming ideas into detailed 3D models while continuously developing my technical, design, and problem-solving skills.",
+      highlights: ["3D CAD Modeling", "Assembly Design", "Technical Drawing"],
     },
     skills: {
       heading: "Skills",
@@ -42,11 +42,11 @@
     },
     contact: {
       intro: "I'm open to freelance work, collaborations, and internship opportunities. Feel free to reach out!",
-      email: "waliuzzamantalha5@gmail.com",
-      linkedinUrl: "https://www.linkedin.com/in/waliuzzaman-talha-216738332",
-      linkedinLabel: "waliuzzaman-talha",
-      whatsappDigits: "8801639769074",
-      whatsappDisplay: "+880 1639 769074",
+      email: "rafeabdullah415@gmail.com",
+      linkedinUrl: "https://www.linkedin.com/in/md-abdullah-al-hasan-rafi-47999a279/",
+      linkedinLabel: "View LinkedIn",
+      whatsappDigits: "8801644043307",
+      whatsappDisplay: "+880 1644-043307",
     },
     projects: [
       {
@@ -472,6 +472,75 @@
     return clone(DEFAULTS);
   }
 
+  function waitForFirestore(timeoutMs) {
+    if (global.PortfolioFirestore && typeof global.PortfolioFirestore.fetchContent === "function") {
+      return Promise.resolve(global.PortfolioFirestore);
+    }
+    return new Promise(function (resolve) {
+      var done = false;
+      function finish(value) {
+        if (done) return;
+        done = true;
+        resolve(value || null);
+      }
+      global.addEventListener(
+        "portfolio-firestore-ready",
+        function () {
+          finish(global.PortfolioFirestore || null);
+        },
+        { once: true }
+      );
+      global.setTimeout(function () {
+        finish(global.PortfolioFirestore || null);
+      }, typeof timeoutMs === "number" ? timeoutMs : 4000);
+    });
+  }
+
+  /**
+   * Prefer Firestore portfolio/main; fall back to localStorage (then built-in defaults).
+   * When Firestore returns content, mirror it into localStorage as a local cache.
+   */
+  function loadPreferringRemote() {
+    return waitForFirestore().then(function (remote) {
+      if (!remote || typeof remote.fetchContent !== "function") {
+        return { data: load(), source: "local" };
+      }
+      return remote
+        .fetchContent()
+        .then(function (content) {
+          if (content) {
+            save(content);
+            return { data: content, source: "firestore" };
+          }
+          return { data: load(), source: "local" };
+        })
+        .catch(function () {
+          return { data: load(), source: "local" };
+        });
+    });
+  }
+
+  /**
+   * Always write localStorage; also write Firestore when available.
+   * Resolves with { local: true, remote: boolean, error?: Error }.
+   */
+  function saveEverywhere(data) {
+    save(data);
+    return waitForFirestore(1500).then(function (remote) {
+      if (!remote || typeof remote.saveContent !== "function" || !remote.isConfigured()) {
+        return { local: true, remote: false };
+      }
+      return remote
+        .saveContent(data)
+        .then(function () {
+          return { local: true, remote: true };
+        })
+        .catch(function (err) {
+          return { local: true, remote: false, error: err };
+        });
+    });
+  }
+
   function getProjectById(id) {
     var data = load();
     if (!id || !data.projects) return null;
@@ -507,9 +576,13 @@
 
   global.PortfolioStore = {
     DEFAULTS: DEFAULTS,
+    STORAGE_KEY: STORAGE_KEY,
     load: load,
     save: save,
     reset: reset,
+    loadPreferringRemote: loadPreferringRemote,
+    saveEverywhere: saveEverywhere,
+    waitForFirestore: waitForFirestore,
     getProjectById: getProjectById,
     uniqueId: uniqueId,
     slugify: slugify,

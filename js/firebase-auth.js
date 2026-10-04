@@ -1,4 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+import { getApp, getApps, initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
 import {
   browserSessionPersistence,
   confirmPasswordReset,
@@ -70,14 +70,15 @@ var initError = null;
 
 if (isConfigured()) {
   try {
-    var app = initializeApp({
+    var appConfig = {
       apiKey: cfg.apiKey.trim(),
       authDomain: cfg.authDomain.trim(),
       projectId: cfg.projectId.trim(),
       storageBucket: (cfg.storageBucket || "").trim(),
       messagingSenderId: (cfg.messagingSenderId || "").trim(),
       appId: cfg.appId.trim(),
-    });
+    };
+    var app = getApps().length ? getApp() : initializeApp(appConfig);
     try {
       auth = initializeAuth(app, { persistence: browserSessionPersistence });
     } catch (persistErr) {

@@ -31,22 +31,33 @@
     return href;
   }
 
+  function isImagePath(value) {
+    return /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(String(value || ""));
+  }
+
   function applySiteChrome() {
     var site = data.site || {};
+    var about = data.about || {};
     var contact = data.contact || {};
+    var name = site.personName || "Md Abdullah Al Hasan Rafi";
     var logo = document.querySelector(".logo");
     if (logo) {
+      var avatarSrc = about.photo || (isImagePath(site.logo) ? site.logo : "") || "assets/profile.jpg";
       logo.innerHTML = "";
-      logo.appendChild(document.createTextNode(site.logo || "WT"));
-      var dot = document.createElement("span");
-      dot.className = "logo-dot";
-      dot.textContent = ".";
-      logo.appendChild(dot);
+      logo.classList.add("logo--avatar");
+      logo.setAttribute("aria-label", name + " — Home");
+      var img = document.createElement("img");
+      img.src = avatarSrc;
+      img.alt = name;
+      img.className = "logo-avatar";
+      img.width = 40;
+      img.height = 40;
+      img.decoding = "async";
+      logo.appendChild(img);
     }
     if (site.title && !document.body.classList.contains("page-detail")) {
       document.title = site.title;
     }
-    var name = site.personName || "Walliuzzaman Talha";
     document.querySelectorAll(".footer-copy").forEach(function (el) {
       var year = el.querySelector("#year");
       el.innerHTML = "";
@@ -95,7 +106,7 @@
       intro.innerHTML = "";
       intro.appendChild(document.createTextNode((hero.introBefore || "Hi, I'm") + " "));
       var strong = document.createElement("strong");
-      strong.textContent = (data.site && data.site.personName) || "Walliuzzaman Talha";
+      strong.textContent = (data.site && data.site.personName) || "Md Abdullah Al Hasan Rafi";
       intro.appendChild(strong);
       var after = hero.introAfter || "";
       if (after && after.charAt(0) !== "," && after.charAt(0) !== "." && after.charAt(0) !== " ") {
@@ -110,8 +121,13 @@
     var about = data.about || {};
     var photo = document.querySelector(".about-photo");
     if (photo) {
-      photo.src = about.photo || "assets/profile.png";
+      photo.src = about.photo || "assets/profile.jpg";
       photo.alt = about.photoAlt || (data.site && data.site.personName) || "";
+    }
+    var logoAvatar = document.querySelector(".logo-avatar");
+    if (logoAvatar && about.photo) {
+      logoAvatar.src = about.photo;
+      logoAvatar.alt = about.photoAlt || (data.site && data.site.personName) || "";
     }
     var lead = document.querySelector(".about-lead");
     if (lead) lead.textContent = about.lead || "";
@@ -314,10 +330,26 @@
     }
   }
 
-  applySiteChrome();
-  applyHero();
-  applyAbout();
-  applySkills();
-  applyProjects();
-  applyContact();
+  function applyAll(nextData) {
+    data = nextData || data;
+    applySiteChrome();
+    applyHero();
+    applyAbout();
+    applySkills();
+    applyProjects();
+    applyContact();
+    window.dispatchEvent(new CustomEvent("portfolio-content-applied", { detail: { data: data } }));
+  }
+
+  // Instant first paint from localStorage / defaults, then hydrate from Firestore.
+  applyAll(data);
+
+  if (typeof store.loadPreferringRemote === "function") {
+    store.loadPreferringRemote().then(function (result) {
+      if (!result || !result.data) return;
+      if (result.source === "firestore") {
+        applyAll(result.data);
+      }
+    });
+  }
 })();

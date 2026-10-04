@@ -1,11 +1,11 @@
 window.FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAhLFRge2vKkJfnfXejw6F22RG4XYDQkiw",
-  authDomain: "talha-portfolio-admin.firebaseapp.com",
-  projectId: "talha-portfolio-admin",
-  storageBucket: "talha-portfolio-admin.firebasestorage.app",
-  messagingSenderId: "328769919453",
-  appId: "1:328769919453:web:2790caf384f46fedf77e34",
-  measurementId: "G-TNRJSENY6B",
+  apiKey: "AIzaSyDsOHavPWSt2_U9aIub1cS8aE8qSJEe5KM",
+  authDomain: "rafi-abdullah-portfolio.firebaseapp.com",
+  projectId: "rafi-abdullah-portfolio",
+  storageBucket: "rafi-abdullah-portfolio.firebasestorage.app",
+  messagingSenderId: "82503463835",
+  appId: "1:82503463835:web:5f6a24c80732c75bad273e",
+  measurementId: "G-TB7H8GW2XZ",
 
-  allowedAdminEmail: "waliuzzamantalha5@gmail.com"
+  allowedAdminEmail: "rafeabdullah415@gmail.com"
 };

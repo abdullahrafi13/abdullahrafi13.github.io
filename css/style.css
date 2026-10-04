@@ -1,4 +1,4 @@
-/* Walliuzzaman Talha — Portfolio */
+/* Md Abdullah Al Hasan Rafi — Portfolio */
 :root {
   --bg-deep: #07080c;
   --bg-elevated: #12141a;
@@ -155,6 +155,9 @@ a:hover {
   letter-spacing: -0.02em;
   color: var(--text);
   text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .logo:hover {
@@ -164,6 +167,33 @@ a:hover {
 
 .logo-dot {
   color: var(--accent);
+}
+
+.logo--avatar {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid var(--border-glass);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.logo--avatar:hover {
+  color: inherit;
+  transform: scale(1.05);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.logo-avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 18%;
+  border-radius: 50%;
 }
 
 .nav-toggle {
@@ -847,6 +877,7 @@ section:not(.hero) {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center 18%;
   border-radius: 50%;
   border: 3px solid var(--bg-deep);
 }

@@ -28,9 +28,54 @@
     return !!(window.AdminAuth && window.AdminAuth.getUser());
   }
 
+  function saveMessage(okRemote, err) {
+    if (okRemote) return "Saved to Firestore. Refresh the public site to see it.";
+    if (err) {
+      var code = (err && err.code) || "";
+      if (code === "permission-denied" || /permission/i.test(String(err.message || ""))) {
+        return "Saved locally. Firestore permission denied — check Firestore rules for signed-in admin write access.";
+      }
+      if (code === "firestore/timeout" || /timed out/i.test(String(err.message || ""))) {
+        return "Saved locally. Cloud save timed out — check your connection and try again.";
+      }
+      return "Saved locally. Cloud sync failed: " + ((err && err.message) || "unknown error");
+    }
+    return "Saved locally (Firestore unavailable).";
+  }
+
   function persist() {
-    if (!isSignedIn()) return;
+    if (!isSignedIn()) return Promise.resolve({ local: false, remote: false });
+    if (typeof store.saveEverywhere === "function") {
+      return store.saveEverywhere(data);
+    }
     store.save(data);
+    return Promise.resolve({ local: true, remote: false });
+  }
+
+  function persistWithStatus(statusKey, okFallbackMessage) {
+    return persist().then(function (result) {
+      var remote = !!(result && result.remote);
+      var message = remote
+        ? saveMessage(true)
+        : result && result.error
+          ? saveMessage(false, result.error)
+          : okFallbackMessage || saveMessage(false);
+      status(statusKey, message, remote || !!(result && result.local));
+      return result;
+    });
+  }
+
+  function hydrateAdminData() {
+    if (typeof store.loadPreferringRemote !== "function") {
+      fillAll();
+      renderWorks();
+      return Promise.resolve();
+    }
+    return store.loadPreferringRemote().then(function (result) {
+      if (result && result.data) data = result.data;
+      fillAll();
+      renderWorks();
+    });
   }
 
   function setBusy(btn, loading, idleLabel, busyLabel) {
@@ -92,8 +137,7 @@
   function showAdmin() {
     if (loginWrap) loginWrap.classList.add("hidden");
     adminView.classList.remove("hidden");
-    fillAll();
-    renderWorks();
+    hydrateAdminData();
   }
 
   function fillAll() {
@@ -247,9 +291,8 @@
           var tmp = data.projects[i - 1];
           data.projects[i - 1] = data.projects[i];
           data.projects[i] = tmp;
-          persist();
+          persistWithStatus("works", "Order updated.");
           renderWorks();
-          status("works", "Order updated.", true);
         })
       );
       actions.appendChild(
@@ -258,18 +301,16 @@
           var tmp = data.projects[i + 1];
           data.projects[i + 1] = data.projects[i];
           data.projects[i] = tmp;
-          persist();
+          persistWithStatus("works", "Order updated.");
           renderWorks();
-          status("works", "Order updated.", true);
         })
       );
       actions.appendChild(
         btn("Delete", "btn-danger", function () {
           if (!confirm("Delete “" + (project.title || "this work") + "”?")) return;
           data.projects.splice(i, 1);
-          persist();
+          persistWithStatus("works", "Work deleted.");
           renderWorks();
-          status("works", "Work deleted.", true);
         })
       );
       item.appendChild(img);
@@ -584,8 +625,7 @@
     data.hero.typedPhrase = document.getElementById("hero-typed-phrase").value.trim();
     data.hero.introBefore = document.getElementById("hero-before").value.trim();
     data.hero.introAfter = document.getElementById("hero-after").value.trim();
-    persist();
-    status("hero", "Saved. Refresh the public site to see it.", true);
+    persistWithStatus("hero");
   });
 
   document.getElementById("add-highlight").addEventListener("click", function () {
@@ -609,8 +649,7 @@
     if (photoVal && photoVal !== "(uploaded image)") data.about.photo = photoVal;
     data.about.photoAlt = document.getElementById("about-photo-alt").value.trim();
     data.about.lead = document.getElementById("about-lead").value.trim();
-    persist();
-    status("about", "Saved.", true);
+    persistWithStatus("about", "Saved.");
   });
 
   document.getElementById("add-skill").addEventListener("click", function () {
@@ -623,8 +662,7 @@
     e.preventDefault();
     data.skills.heading = document.getElementById("skills-heading-input").value.trim();
     data.skills.sub = document.getElementById("skills-sub-input").value.trim();
-    persist();
-    status("skills", "Saved.", true);
+    persistWithStatus("skills", "Saved.");
   });
 
   document.getElementById("add-work").addEventListener("click", function () {
@@ -687,11 +725,11 @@
     };
     if (editingIndex < 0) data.projects.unshift(project);
     else data.projects[editingIndex] = project;
-    persist();
     delete imageField.dataset.upload;
-    status("work-editor", "Work saved. It now shows on the homepage.", true);
-    renderWorks();
-    setTimeout(showList, 500);
+    persistWithStatus("work-editor", "Work saved. It now shows on the homepage.").then(function () {
+      renderWorks();
+      setTimeout(showList, 500);
+    });
   });
 
   document.getElementById("form-contact").addEventListener("submit", function (e) {
@@ -702,8 +740,7 @@
     data.contact.linkedinLabel = document.getElementById("contact-linkedin-label").value.trim();
     data.contact.whatsappDigits = document.getElementById("contact-wa").value.replace(/\D/g, "");
     data.contact.whatsappDisplay = document.getElementById("contact-wa-display").value.trim();
-    persist();
-    status("contact", "Saved.", true);
+    persistWithStatus("contact", "Saved.");
   });
 
   document.getElementById("export-json").addEventListener("click", function () {
@@ -729,10 +766,10 @@
         var parsed = JSON.parse(String(reader.result || ""));
         if (!parsed || !Array.isArray(parsed.projects)) throw new Error("Invalid file");
         data = parsed;
-        persist();
-        fillAll();
-        renderWorks();
-        status("settings", "Imported. Content updated.", true);
+        persistWithStatus("settings", "Imported. Content updated.").then(function () {
+          fillAll();
+          renderWorks();
+        });
       } catch (err) {
         status("settings", "Could not import that file.", false);
       }
@@ -770,10 +807,11 @@
       return;
     }
     data = store.reset();
-    fillAll();
-    renderWorks();
-    showList();
-    status("settings", "Content reset to original.", true);
+    persistWithStatus("settings", "Content reset to original.").then(function () {
+      fillAll();
+      renderWorks();
+      showList();
+    });
   });
 
   waitForAuth(function (auth) {

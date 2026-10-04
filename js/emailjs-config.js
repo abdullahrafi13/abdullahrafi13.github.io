@@ -16,11 +16,11 @@
  */
 window.EMAILJS_CONFIG = {
   /** EmailJS → Account → API keys → Public Key */
-  publicKey: "EJBCTQ_2MCpBblLZr",
+  publicKey: "QuLI1gGC8Z15c72BR",
 
   /** EmailJS → Email Services → your service → Service ID */
-  serviceId: "service_usrgie7",
+  serviceId: "service_nm6eabj",
 
   /** EmailJS → Email Templates → your template → Template ID */
-  templateId: "template_xx91v0d",
+  templateId: "template_qc4di1m",
 };
