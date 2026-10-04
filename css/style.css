@@ -1468,3 +1468,90 @@ section:not(.hero) {
 .detail-body li {
   margin-bottom: 0.4rem;
 }
+
+/* STL 3D viewer (project detail) */
+.detail-stl-section {
+  margin: 0 0 1.75rem;
+}
+
+.stl-viewer-shell {
+  padding: 1rem 1rem 1.15rem;
+  overflow: hidden;
+}
+
+.stl-viewer-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.detail-stl-heading {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  margin: 0 0 0.25rem;
+  color: var(--text);
+}
+
+.stl-viewer-hint {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-muted);
+}
+
+.stl-viewer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.stl-viewer-stage {
+  position: relative;
+  width: 100%;
+  min-height: 280px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(90, 120, 180, 0.12), transparent 55%),
+    #0d0f14;
+  border: 1px solid var(--border-glass);
+  touch-action: none;
+}
+
+.stl-viewer-stage canvas {
+  display: block;
+  width: 100% !important;
+  height: auto !important;
+}
+
+.stl-viewer-status,
+.stl-viewer-progress {
+  margin: 0.65rem 0 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  min-height: 1.2em;
+}
+
+.stl-viewer-shell.is-fullscreen {
+  border-radius: 0;
+  padding: 1rem;
+  background: #0a0b0d;
+}
+
+.stl-viewer-shell.is-fullscreen .stl-viewer-stage {
+  min-height: calc(100vh - 7rem);
+}
+
+@media (max-width: 720px) {
+  .stl-viewer-actions {
+    width: 100%;
+  }
+
+  .stl-viewer-actions .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    text-align: center;
+  }
+}

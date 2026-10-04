@@ -48,6 +48,24 @@
           <p class="detail-gallery-lead reveal hidden" id="detail-gallery-lead"></p>
           <div id="detail-gallery" class="detail-gallery"></div>
         </section>
+        <section id="detail-stl-section" class="detail-stl-section hidden reveal" aria-label="3D model preview">
+          <div class="stl-viewer-shell glass">
+            <div class="stl-viewer-header">
+              <div>
+                <h2 class="detail-stl-heading" id="detail-stl-heading">3D Model Preview</h2>
+                <p class="stl-viewer-hint hidden" id="stl-viewer-hint"></p>
+              </div>
+              <div class="stl-viewer-actions">
+                <button type="button" class="btn btn-outline btn-small" id="stl-reset-view">Reset view</button>
+                <button type="button" class="btn btn-outline btn-small" id="stl-fullscreen">Fullscreen</button>
+                <a class="btn btn-primary btn-small" id="stl-download" href="#" download>Download STL</a>
+              </div>
+            </div>
+            <div class="stl-viewer-stage" id="stl-viewer-canvas" role="img" aria-label="Interactive STL model viewer"></div>
+            <p class="stl-viewer-status" id="stl-viewer-status" role="status"></p>
+            <p class="stl-viewer-progress" id="stl-viewer-progress" aria-live="polite"></p>
+          </div>
+        </section>
         <div class="detail-body glass reveal">
           <h2>Overview</h2>
           <p id="detail-overview"></p>
@@ -76,5 +94,6 @@
   <script type="module" src="js/firebase-db.js"></script>
   <script src="js/site-render.js"></script>
   <script src="js/project-detail.js" defer></script>
+  <script type="module" src="js/stl-viewer.js"></script>
 </body>
 </html>

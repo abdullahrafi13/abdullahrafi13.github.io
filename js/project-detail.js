@@ -10,9 +10,14 @@
   var yearEl = document.getElementById("year");
   if (yearEl && !yearEl.textContent) yearEl.textContent = String(new Date().getFullYear());
 
+  var stlControlsBound = false;
+  var stlApi = null;
+  var lastStlUrl = "";
+
   function showEmpty() {
     if (empty) empty.classList.remove("hidden");
     if (content) content.classList.add("hidden");
+    hideStlSection();
   }
 
   function findProject(portfolio, projectId) {
@@ -21,6 +26,82 @@
       if (portfolio.projects[i].id === projectId) return portfolio.projects[i];
     }
     return null;
+  }
+
+  function hideStlSection() {
+    var section = document.getElementById("detail-stl-section");
+    if (section) section.classList.add("hidden");
+    lastStlUrl = "";
+    if (window.StlViewer && typeof window.StlViewer.disposeActive === "function") {
+      window.StlViewer.disposeActive();
+    }
+    stlApi = null;
+  }
+
+  function bindStlControls() {
+    if (stlControlsBound) return;
+    stlControlsBound = true;
+    var resetBtn = document.getElementById("stl-reset-view");
+    var fullBtn = document.getElementById("stl-fullscreen");
+    if (resetBtn) {
+      resetBtn.addEventListener("click", function () {
+        if (stlApi && typeof stlApi.resetView === "function") stlApi.resetView();
+      });
+    }
+    if (fullBtn) {
+      fullBtn.addEventListener("click", function () {
+        if (stlApi && typeof stlApi.toggleFullscreen === "function") stlApi.toggleFullscreen();
+      });
+    }
+    document.addEventListener("fullscreenchange", function () {
+      var shell = document.querySelector(".stl-viewer-shell");
+      if (!shell) return;
+      shell.classList.toggle("is-fullscreen", !!document.fullscreenElement);
+      window.dispatchEvent(new Event("resize"));
+    });
+  }
+
+  function mountStlWhenReady(url) {
+    function tryMount() {
+      if (!window.StlViewer || typeof window.StlViewer.mount !== "function") return false;
+      stlApi = window.StlViewer.mount({ url: url });
+      return true;
+    }
+    if (tryMount()) return;
+    window.addEventListener(
+      "stl-viewer-ready",
+      function () {
+        tryMount();
+      },
+      { once: true }
+    );
+  }
+
+  function applyStlSection(project) {
+    var section = document.getElementById("detail-stl-section");
+    var download = document.getElementById("stl-download");
+    var model = project && project.stlModel;
+    var url = model && model.downloadURL ? String(model.downloadURL) : "";
+
+    if (!section) return;
+
+    if (!url) {
+      hideStlSection();
+      return;
+    }
+
+    section.classList.remove("hidden");
+    bindStlControls();
+
+    if (download) {
+      download.href = url;
+      download.setAttribute("download", model.name || "model.stl");
+      download.rel = "noopener noreferrer";
+    }
+
+    if (url === lastStlUrl && stlApi) return;
+    lastStlUrl = url;
+    mountStlWhenReady(url);
   }
 
   function renderDetail(project, personName) {
@@ -91,6 +172,8 @@
         }
       }
     }
+
+    applyStlSection(project);
 
     function runReveals() {
       if ("IntersectionObserver" in window && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {

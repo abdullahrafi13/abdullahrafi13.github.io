@@ -263,7 +263,27 @@
                 <div id="gallery-list" class="gallery-editor"></div>
                 <button class="btn btn-outline btn-small" type="button" id="add-gallery">Add gallery image</button>
               </div>
-              <button class="btn btn-primary" type="submit">Save work</button>
+              <div class="form-row stl-admin-block" id="work-stl-block">
+                <label for="work-stl-file">STL 3D Model (Optional)</label>
+                <p class="admin-hint">Upload a <code>.stl</code> file to show a rotatable 3D preview on the project detail page. Max size is configured in code (default 50&nbsp;MB). Stored in Firebase Storage — not in Firestore.</p>
+                <input id="work-stl-file" type="file" accept=".stl,model/stl,application/sla,application/octet-stream" />
+                <div id="work-stl-current" class="stl-admin-current hidden" aria-live="polite">
+                  <p class="stl-admin-attached"><strong>Attached:</strong> <span id="work-stl-name"></span></p>
+                  <p class="admin-hint" id="work-stl-meta"></p>
+                </div>
+                <p class="admin-hint" id="work-stl-pending"></p>
+                <div class="stl-admin-progress hidden" id="work-stl-progress-wrap">
+                  <div class="stl-admin-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="work-stl-progress-bar">
+                    <span id="work-stl-progress-fill"></span>
+                  </div>
+                  <p class="admin-hint" id="work-stl-progress-label">Uploading…</p>
+                </div>
+                <div class="stl-admin-actions">
+                  <button class="btn btn-outline btn-small" type="button" id="work-stl-remove" disabled>Remove STL</button>
+                </div>
+                <p class="admin-status" id="work-stl-status" role="status"></p>
+              </div>
+              <button class="btn btn-primary" type="submit" id="work-save-btn">Save work</button>
               <p class="admin-status" data-status="work-editor"></p>
             </form>
           </div>
@@ -335,6 +355,7 @@
   <script src="js/firebase-config.js"></script>
   <script type="module" src="js/firebase-auth.js"></script>
   <script type="module" src="js/firebase-db.js"></script>
+  <script type="module" src="js/firebase-storage.js"></script>
   <script src="js/admin.js" defer></script>
 </body>
 </html>

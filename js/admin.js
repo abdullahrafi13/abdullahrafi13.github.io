@@ -6,6 +6,13 @@
 
   var data = store.load();
   var editingIndex = -1;
+  /** In-editor STL state (metadata only; binary stays in Firebase Storage). */
+  var workStl = {
+    current: null,
+    pendingFile: null,
+    removeRequested: false,
+    busy: false,
+  };
 
   var loginForm = document.getElementById("login-form");
   var recoverForm = document.getElementById("recover-form");
@@ -308,9 +315,19 @@
       actions.appendChild(
         btn("Delete", "btn-danger", function () {
           if (!confirm("Delete “" + (project.title || "this work") + "”?")) return;
+          var removed = data.projects[i];
           data.projects.splice(i, 1);
-          persistWithStatus("works", "Work deleted.");
-          renderWorks();
+          persistWithStatus("works", "Work deleted.").then(function () {
+            renderWorks();
+            var path = removed && removed.stlModel && removed.stlModel.storagePath;
+            if (path) {
+              waitForStorage(1500).then(function (api) {
+                if (api && typeof api.deleteStl === "function") {
+                  api.deleteStl(path).catch(function () {});
+                }
+              });
+            }
+          });
         })
       );
       item.appendChild(img);
@@ -338,6 +355,172 @@
       liveUrl: "",
       sourceUrl: "",
     };
+  }
+
+  function setStlStatus(message, ok) {
+    var el = document.getElementById("work-stl-status");
+    if (!el) return;
+    el.textContent = message || "";
+    el.className = "admin-status " + (ok ? "ok" : message ? "err" : "");
+  }
+
+  function setStlProgress(visible, percent, label) {
+    var wrap = document.getElementById("work-stl-progress-wrap");
+    var bar = document.getElementById("work-stl-progress-bar");
+    var fill = document.getElementById("work-stl-progress-fill");
+    var labelEl = document.getElementById("work-stl-progress-label");
+    if (!wrap) return;
+    wrap.classList.toggle("hidden", !visible);
+    var pct = Math.max(0, Math.min(100, Number(percent) || 0));
+    if (bar) bar.setAttribute("aria-valuenow", String(pct));
+    if (fill) fill.style.width = pct + "%";
+    if (labelEl) labelEl.textContent = label || (pct + "%");
+  }
+
+  function formatStlSize(bytes) {
+    if (window.PortfolioStorage && typeof window.PortfolioStorage.formatBytes === "function") {
+      return window.PortfolioStorage.formatBytes(bytes);
+    }
+    var n = Number(bytes) || 0;
+    if (n < 1024) return n + " B";
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+    return (n / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
+  function resetWorkStlState(existingModel) {
+    workStl.current = existingModel && existingModel.downloadURL ? store.clone(existingModel) : null;
+    workStl.pendingFile = null;
+    workStl.removeRequested = false;
+    workStl.busy = false;
+    var fileInput = document.getElementById("work-stl-file");
+    if (fileInput) fileInput.value = "";
+    setStlProgress(false, 0, "");
+    setStlStatus("", true);
+    renderWorkStlUi();
+  }
+
+  function renderWorkStlUi() {
+    var currentBox = document.getElementById("work-stl-current");
+    var nameEl = document.getElementById("work-stl-name");
+    var metaEl = document.getElementById("work-stl-meta");
+    var pendingEl = document.getElementById("work-stl-pending");
+    var removeBtn = document.getElementById("work-stl-remove");
+    var fileInput = document.getElementById("work-stl-file");
+    var hasCurrent = !!(workStl.current && workStl.current.downloadURL && !workStl.removeRequested);
+
+    if (currentBox) currentBox.classList.toggle("hidden", !hasCurrent);
+    if (hasCurrent) {
+      if (nameEl) nameEl.textContent = workStl.current.name || "model.stl";
+      if (metaEl) {
+        var bits = [];
+        if (workStl.current.size) bits.push(formatStlSize(workStl.current.size));
+        if (workStl.current.uploadedAt) bits.push("uploaded " + String(workStl.current.uploadedAt).slice(0, 10));
+        metaEl.textContent = bits.length ? bits.join(" · ") : "Stored in Firebase Storage";
+      }
+    }
+
+    if (pendingEl) {
+      if (workStl.pendingFile) {
+        pendingEl.textContent =
+          "Selected for upload on Save: " +
+          workStl.pendingFile.name +
+          " (" +
+          formatStlSize(workStl.pendingFile.size) +
+          ")";
+      } else if (workStl.removeRequested && workStl.current) {
+        pendingEl.textContent = "STL will be removed when you save this work.";
+      } else {
+        pendingEl.textContent = "";
+      }
+    }
+
+    if (removeBtn) {
+      removeBtn.disabled = workStl.busy || (!hasCurrent && !workStl.pendingFile && !workStl.removeRequested);
+    }
+    if (fileInput) fileInput.disabled = !!workStl.busy;
+  }
+
+  function waitForStorage(timeoutMs) {
+    if (window.PortfolioStorage && typeof window.PortfolioStorage.uploadStl === "function") {
+      return Promise.resolve(window.PortfolioStorage);
+    }
+    return new Promise(function (resolve) {
+      var done = false;
+      function finish(value) {
+        if (done) return;
+        done = true;
+        resolve(value || null);
+      }
+      window.addEventListener(
+        "portfolio-storage-ready",
+        function () {
+          finish(window.PortfolioStorage || null);
+        },
+        { once: true }
+      );
+      window.setTimeout(function () {
+        finish(window.PortfolioStorage || null);
+      }, typeof timeoutMs === "number" ? timeoutMs : 4000);
+    });
+  }
+
+  /**
+   * Resolve final stlModel for a project being saved.
+   * Uploads pending file, deletes removed/replaced Storage objects when safe.
+   */
+  function resolveStlForSave(projectId, previousModel) {
+    return waitForStorage().then(function (api) {
+      var prev = previousModel && previousModel.downloadURL ? previousModel : null;
+      var oldPath = prev && prev.storagePath ? prev.storagePath : "";
+
+      if (workStl.removeRequested && !workStl.pendingFile) {
+        if (!oldPath || !api) {
+          return { stlModel: null, cleanupError: null };
+        }
+        return api
+          .deleteStl(oldPath)
+          .then(function () {
+            return { stlModel: null, cleanupError: null };
+          })
+          .catch(function (err) {
+            return { stlModel: null, cleanupError: err };
+          });
+      }
+
+      if (!workStl.pendingFile) {
+        return { stlModel: prev, cleanupError: null };
+      }
+
+      if (!api || typeof api.uploadStl !== "function") {
+        var missing = new Error("Firebase Storage is not ready. Refresh and try again.");
+        missing.code = "storage/not-ready";
+        return Promise.reject(missing);
+      }
+
+      setStlProgress(true, 0, "Uploading STL… 0%");
+      return api
+        .uploadStl(projectId, workStl.pendingFile, function (pct) {
+          setStlProgress(true, pct, "Uploading STL… " + pct + "%");
+        })
+        .then(function (meta) {
+          setStlProgress(true, 100, "Upload complete");
+          if (oldPath && oldPath !== meta.storagePath) {
+            return api.deleteStl(oldPath).then(
+              function () {
+                return { stlModel: meta, cleanupError: null };
+              },
+              function (err) {
+                return { stlModel: meta, cleanupError: err };
+              }
+            );
+          }
+          return { stlModel: meta, cleanupError: null };
+        })
+        .catch(function (err) {
+          setStlProgress(false, 0, "");
+          throw err;
+        });
+    });
   }
 
   function showList() {
@@ -369,6 +552,7 @@
     document.getElementById("work-image-file").value = "";
     updateThumb("work-image-preview", project.image);
     renderGallery(project.gallery || []);
+    resetWorkStlState(project.stlModel || null);
     status("work-editor", "", true);
   }
 
@@ -685,8 +869,47 @@
     renderGallery(items);
   });
 
+  document.getElementById("work-stl-file").addEventListener("change", function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    waitForStorage(1500).then(function (api) {
+      try {
+        if (api && typeof api.validateStlFile === "function") {
+          api.validateStlFile(file);
+        } else if (!/\.stl$/i.test(file.name || "")) {
+          throw new Error("Only .stl files are allowed.");
+        }
+        workStl.pendingFile = file;
+        workStl.removeRequested = false;
+        setStlStatus("STL selected. It will upload when you save this work.", true);
+        renderWorkStlUi();
+      } catch (err) {
+        workStl.pendingFile = null;
+        e.target.value = "";
+        setStlStatus((err && err.message) || "Invalid STL file.", false);
+        renderWorkStlUi();
+      }
+    });
+  });
+
+  document.getElementById("work-stl-remove").addEventListener("click", function () {
+    if (workStl.busy) return;
+    workStl.pendingFile = null;
+    var fileInput = document.getElementById("work-stl-file");
+    if (fileInput) fileInput.value = "";
+    if (workStl.current && workStl.current.downloadURL) {
+      workStl.removeRequested = true;
+      setStlStatus("STL marked for removal. Save the work to confirm.", true);
+    } else {
+      workStl.removeRequested = false;
+      setStlStatus("No STL attached.", true);
+    }
+    renderWorkStlUi();
+  });
+
   document.getElementById("form-work").addEventListener("submit", function (e) {
     e.preventDefault();
+    if (workStl.busy) return;
     var title = document.getElementById("work-title").value.trim();
     if (!title) {
       status("work-editor", "Title is required.", false);
@@ -700,6 +923,7 @@
       return i !== editingIndex;
     });
     var id = (existing && existing.id) || store.uniqueId(title, others);
+    var previousStl = (existing && existing.stlModel) || workStl.current || null;
     var project = {
       id: id,
       title: title,
@@ -723,13 +947,93 @@
       liveUrl: document.getElementById("work-live").value.trim(),
       sourceUrl: document.getElementById("work-source").value.trim(),
     };
-    if (editingIndex < 0) data.projects.unshift(project);
-    else data.projects[editingIndex] = project;
-    delete imageField.dataset.upload;
-    persistWithStatus("work-editor", "Work saved. It now shows on the homepage.").then(function () {
-      renderWorks();
-      setTimeout(showList, 500);
-    });
+
+    var saveBtn = document.getElementById("work-save-btn");
+    workStl.busy = true;
+    renderWorkStlUi();
+    setBusy(saveBtn, true, "Save work", "Saving…");
+    status("work-editor", workStl.pendingFile ? "Uploading STL and saving…" : "Saving…", true);
+
+    resolveStlForSave(id, previousStl)
+      .then(function (result) {
+        var uploadedNew = !!(result && result.stlModel && workStl.pendingFile);
+        var uploadedPath = uploadedNew && result.stlModel ? result.stlModel.storagePath : "";
+        if (result && result.stlModel) {
+          project.stlModel = result.stlModel;
+        }
+        if (editingIndex < 0) data.projects.unshift(project);
+        else data.projects[editingIndex] = project;
+        delete imageField.dataset.upload;
+
+        return persistWithStatus(
+          "work-editor",
+          result && result.stlModel
+            ? "Work saved with STL model."
+            : workStl.removeRequested
+              ? "Work saved. STL removed."
+              : "Work saved. It now shows on the homepage."
+        ).then(function (persistResult) {
+          if (persistResult && persistResult.remote === false && uploadedNew && uploadedPath) {
+            status(
+              "work-editor",
+              "STL uploaded, but saving portfolio to Firestore failed. Cleaning up the uploaded file. Fix the cloud save error and try again.",
+              false
+            );
+            return waitForStorage(1000).then(function (api) {
+              if (api && typeof api.deleteStl === "function") {
+                return api.deleteStl(uploadedPath).catch(function () {});
+              }
+            }).then(function () {
+              if (previousStl && previousStl.downloadURL && !workStl.removeRequested) {
+                project.stlModel = previousStl;
+              } else {
+                delete project.stlModel;
+              }
+              if (editingIndex < 0) data.projects[0] = project;
+              else data.projects[editingIndex] = project;
+              store.save(data);
+              workStl.busy = false;
+              setBusy(saveBtn, false, "Save work", "Saving…");
+              setStlProgress(false, 0, "");
+              resetWorkStlState(project.stlModel || null);
+              renderWorks();
+            });
+          }
+
+          if (result && result.cleanupError) {
+            setStlStatus(
+              "Saved, but old STL cleanup failed: " +
+                ((result.cleanupError && result.cleanupError.message) || "unknown error"),
+              false
+            );
+          } else if (project.stlModel) {
+            setStlStatus("STL attached: " + (project.stlModel.name || "model.stl"), true);
+          } else {
+            setStlStatus("", true);
+          }
+
+          workStl.busy = false;
+          setBusy(saveBtn, false, "Save work", "Saving…");
+          setStlProgress(false, 0, "");
+          resetWorkStlState(project.stlModel || null);
+          renderWorks();
+          setTimeout(showList, 600);
+        });
+      })
+      .catch(function (err) {
+        workStl.busy = false;
+        setBusy(saveBtn, false, "Save work", "Saving…");
+        setStlProgress(false, 0, "");
+        renderWorkStlUi();
+        var msg =
+          (window.PortfolioStorage && window.PortfolioStorage.mapError
+            ? window.PortfolioStorage.mapError(err)
+            : null) ||
+          (err && err.message) ||
+          "Could not save STL / work.";
+        setStlStatus(msg, false);
+        status("work-editor", msg, false);
+      });
   });
 
   document.getElementById("form-contact").addEventListener("submit", function (e) {
