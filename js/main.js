@@ -88,26 +88,39 @@
   window.addEventListener("resize", updateNavFromScroll, { passive: true });
   updateNavFromScroll();
 
-  /* Hero typing (subtitle) */
+  /* Hero typing (subtitle) — restarts if portfolio content updates the phrase */
   var typedEl = document.getElementById("hero-typed");
-  var phrase =
-    (typedEl && typedEl.getAttribute("data-phrase")) || "precision engineering models.";
-  if (typedEl) {
+  var typedTimer = null;
+  var typedToken = 0;
+
+  function startHeroTyping() {
+    if (!typedEl) return;
+    var phrase =
+      typedEl.getAttribute("data-phrase") || "precision engineering models.";
+    if (typedTimer) {
+      window.clearTimeout(typedTimer);
+      typedTimer = null;
+    }
+    typedToken += 1;
+    var token = typedToken;
     if (reducedMotion) {
       typedEl.textContent = phrase;
-    } else {
-      typedEl.textContent = "";
-      var i = 0;
-      function typeStep() {
-        if (i <= phrase.length) {
-          typedEl.textContent = phrase.slice(0, i);
-          i++;
-          window.setTimeout(typeStep, i < 12 ? 42 : 28);
-        }
-      }
-      window.setTimeout(typeStep, 400);
+      return;
     }
+    typedEl.textContent = "";
+    var i = 0;
+    function typeStep() {
+      if (token !== typedToken) return;
+      if (i <= phrase.length) {
+        typedEl.textContent = phrase.slice(0, i);
+        i++;
+        typedTimer = window.setTimeout(typeStep, i < 12 ? 42 : 28);
+      }
+    }
+    typedTimer = window.setTimeout(typeStep, 400);
   }
+
+  startHeroTyping();
 
   /* Button ripple */
   if (!reducedMotion) {
@@ -132,65 +145,94 @@
     );
   }
 
-  /* Scroll reveal */
-  if (!reducedMotion && "IntersectionObserver" in window) {
-    var io = new IntersectionObserver(
-      function (entries) {
-        entries.forEach(function (entry) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("is-visible");
-            if (entry.target.classList.contains("skill-card")) {
-              var fill = entry.target.querySelector(".skill-fill");
-              var pct = entry.target.querySelector(".skill-pct");
-              if (fill) {
-                requestAnimationFrame(function () {
-                  fill.classList.add("is-animated");
-                });
-              }
-              if (pct && fill) {
-                var w = parseInt(fill.getAttribute("data-width"), 10) || 0;
-                var start = null;
-                function tick(t) {
-                  if (start === null) start = t;
-                  var p = Math.min((t - start) / 900, 1);
-                  var eased = 1 - Math.pow(1 - p, 3);
-                  pct.textContent = Math.round(w * eased) + "%";
-                  if (p < 1) requestAnimationFrame(tick);
-                }
-                requestAnimationFrame(tick);
-              }
-            }
-            io.unobserve(entry.target);
-          }
-        });
-      },
-      { rootMargin: "0px 0px -8% 0px", threshold: 0.08 }
-    );
+  /* Scroll reveal — rebind after Firestore/local content re-renders skills & projects */
+  var revealIo = null;
 
-    document.querySelectorAll(".reveal").forEach(function (el) {
-      // Add staggered delay for sibling reveals if not already set
+  function animateSkillCard(card) {
+    if (!card || card.dataset.skillAnimated === "1") return;
+    card.dataset.skillAnimated = "1";
+    var fill = card.querySelector(".skill-fill");
+    var pct = card.querySelector(".skill-pct");
+    if (fill) {
+      requestAnimationFrame(function () {
+        fill.classList.add("is-animated");
+      });
+    }
+    if (pct && fill) {
+      var w = parseInt(fill.getAttribute("data-width"), 10) || 0;
+      if (reducedMotion) {
+        pct.textContent = w + "%";
+        return;
+      }
+      var start = null;
+      function tick(t) {
+        if (start === null) start = t;
+        var p = Math.min((t - start) / 900, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        pct.textContent = Math.round(w * eased) + "%";
+        if (p < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+  }
+
+  function revealNow(el) {
+    if (!el) return;
+    el.classList.add("is-visible");
+    if (el.classList.contains("skill-card")) animateSkillCard(el);
+  }
+
+  function bindReveals(root) {
+    var scope = root && root.querySelectorAll ? root : document;
+    var nodes = scope.querySelectorAll(".reveal");
+
+    if (reducedMotion || !("IntersectionObserver" in window)) {
+      nodes.forEach(function (el) {
+        revealNow(el);
+      });
+      return;
+    }
+
+    if (!revealIo) {
+      revealIo = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            revealNow(entry.target);
+            revealIo.unobserve(entry.target);
+          });
+        },
+        { rootMargin: "0px 0px -8% 0px", threshold: 0.08 }
+      );
+    }
+
+    nodes.forEach(function (el) {
+      if (el.dataset.revealBound === "1" && el.classList.contains("is-visible")) return;
+      el.dataset.revealBound = "1";
       var parent = el.parentElement;
       if (parent && parent.classList.contains("stagger-children")) {
         var index = Array.from(parent.children).indexOf(el);
-        el.style.transitionDelay = (index * 0.1) + "s";
+        el.style.transitionDelay = index * 0.1 + "s";
       }
-      io.observe(el);
-    });
-  } else {
-    document.querySelectorAll(".reveal").forEach(function (el) {
-      el.classList.add("is-visible");
-    });
-    document.querySelectorAll(".skill-fill").forEach(function (f) {
-      f.classList.add("is-animated");
-    });
-    document.querySelectorAll(".skill-pct").forEach(function (p) {
-      var card = p.closest(".skill-card");
-      var fill = card && card.querySelector(".skill-fill");
-      if (fill) {
-        p.textContent = (parseInt(fill.getAttribute("data-width"), 10) || 0) + "%";
+      // Fresh DOM nodes from Firestore hydrate need a new observation.
+      if (el.classList.contains("is-visible") && el.classList.contains("skill-card")) {
+        animateSkillCard(el);
+        return;
       }
+      el.classList.remove("is-visible");
+      revealIo.observe(el);
     });
   }
+
+  bindReveals(document);
+
+  window.addEventListener("portfolio-content-applied", function () {
+    startHeroTyping();
+    // Defer one frame so layout/DOM from site-render is settled.
+    requestAnimationFrame(function () {
+      bindReveals(document);
+    });
+  });
 
   /* Contact form — EmailJS */
   var form = document.getElementById("contact-form");
